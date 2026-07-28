@@ -1,9 +1,11 @@
 # Multigravity
 
-Run multiple fully isolated Antigravity profiles on Linux.
+Run multiple account-isolated Antigravity profiles on Linux.
 
-Each profile has its own login, settings, extensions, and cache. When launched,
-Antigravity opens the directory you are currently in.
+Each profile has its own Antigravity login, settings, extensions, and cache.
+Host tool configuration and credentials are shared, so Git, SSH, GitHub CLI,
+shells, and other developer tools behave as they do outside Multigravity. When
+launched, Antigravity opens the directory you are currently in.
 
 ## Install
 
@@ -52,6 +54,12 @@ Available commands:
 
 Profiles are stored in `$HOME/AntigravityProfiles`. Set `MULTIGRAVITY_HOME` to
 a different absolute directory if needed.
+
+Multigravity links non-Antigravity files from your home and XDG directories
+into each profile. Existing profile files are never overwritten. This makes
+normal developer workflows seamless, but it also means every profile can
+access the same host credentials and developer-tool state. Antigravity and
+Gemini account state remains local to each profile.
 
 ## Uninstall
 

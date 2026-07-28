@@ -27,6 +27,37 @@ teardown() { teardown_workspace; }
   [[ "$output" == *"ARG=$TEST_ROOT/project folder"* ]]
 }
 
+@test "launch shares host tool state but isolates Antigravity state" {
+  printf '[user]\n  name = Host User\n' >"$HOME/.gitconfig"
+  mkdir -p "$HOME/.ssh" "$HOME/.config/gh" "$HOME/.config/tooling" "$HOME/.local/share/keyrings" "$HOME/.gemini"
+  printf 'github.com:\n' >"$HOME/.config/gh/hosts.yml"
+  printf 'host\n' >"$HOME/.config/tooling/settings"
+  printf 'secret\n' >"$HOME/.gemini/token"
+
+  "$CLI" new alpha
+  mkdir -p "$MULTIGRAVITY_HOME/alpha/.config/tooling" "$MULTIGRAVITY_HOME/alpha/.gemini"
+  printf 'profile\n' >"$MULTIGRAVITY_HOME/alpha/.config/tooling/settings"
+  run "$CLI" launch alpha
+  [ "$status" -eq 0 ]
+
+  [ "$(readlink "$MULTIGRAVITY_HOME/alpha/.gitconfig")" = "$HOME/.gitconfig" ]
+  [ "$(readlink "$MULTIGRAVITY_HOME/alpha/.ssh")" = "$HOME/.ssh" ]
+  [ "$(readlink "$MULTIGRAVITY_HOME/alpha/.config/gh")" = "$HOME/.config/gh" ]
+  [ "$(readlink "$MULTIGRAVITY_HOME/alpha/.local/share/keyrings")" = "$HOME/.local/share/keyrings" ]
+  [ ! -L "$MULTIGRAVITY_HOME/alpha/.config/Antigravity" ]
+  [ ! -L "$MULTIGRAVITY_HOME/alpha/.antigravity" ]
+  [ ! -L "$MULTIGRAVITY_HOME/alpha/.gemini" ]
+  [ "$(<"$MULTIGRAVITY_HOME/alpha/.config/tooling/settings")" = profile ]
+}
+
+@test "launch does not link a profile root nested below the host home" {
+  local nested_profiles="$HOME/AntigravityProfiles"
+  env MULTIGRAVITY_HOME="$nested_profiles" "$CLI" new alpha
+  run env MULTIGRAVITY_HOME="$nested_profiles" "$CLI" launch alpha
+  [ "$status" -eq 0 ]
+  [ ! -e "$nested_profiles/alpha/AntigravityProfiles" ]
+}
+
 @test "noninteractive deletion fails closed" {
   "$CLI" new alpha
   run bash -c 'printf y | "$1" delete alpha' _ "$CLI"
