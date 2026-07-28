@@ -18,7 +18,7 @@ Never pipe a network response into a shell. Choose a stable release tag and
 download all verification material from that immutable release:
 
 ```bash
-tag=v1.0.0
+tag=v0.1.1
 base="https://github.com/RyderAsKing/multigravity-cli/releases/download/$tag"
 curl -fLO "$base/multigravity-linux-all"
 curl -fLO "$base/multigravity-linux-all.bundle"
