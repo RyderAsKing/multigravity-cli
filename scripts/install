@@ -29,7 +29,7 @@ done
   exit 4
 }
 bash -n "$artifact"
-version=$("$artifact" version --short)
+version=$("$artifact" version)
 [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
   printf 'artifact is not a release build\n' >&2
   exit 4

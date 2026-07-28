@@ -4,40 +4,27 @@ load ../test_helper
 setup() { setup_workspace; }
 teardown() { teardown_workspace; }
 
-@test "create list clone rename and delete profile" {
+@test "create list and delete profile" {
   run "$CLI" new alpha
   [ "$status" -eq 0 ]
-  run "$CLI" clone alpha beta
+  run "$CLI" new beta
   [ "$status" -eq 0 ]
-  run "$CLI" rename beta gamma
+  run "$CLI" list
   [ "$status" -eq 0 ]
-  run "$CLI" list --raw
+  [ "$output" = $'alpha\nbeta' ]
+  run "$CLI" delete beta --yes
   [ "$status" -eq 0 ]
-  [ "$output" = $'alpha\ngamma' ]
-  run "$CLI" delete gamma --yes
-  [ "$status" -eq 0 ]
-  [ ! -e "$MULTIGRAVITY_HOME/gamma" ]
+  [ ! -e "$MULTIGRAVITY_HOME/beta" ]
 }
 
-@test "launch preserves hostile arguments as data" {
+@test "launch opens the current directory with isolated state" {
   "$CLI" new alpha
-  run "$CLI" launch alpha -- 'space value' ';touch injected' '$(touch injected2)'
+  mkdir -p "$TEST_ROOT/project folder"
+  cd "$TEST_ROOT/project folder"
+  run "$CLI" launch alpha
   [ "$status" -eq 0 ]
-  [[ "$output" == *'ARG=space value'* ]]
-  [[ "$output" == *'ARG=;touch injected'* ]]
-  [ ! -e injected ]
-  [ ! -e injected2 ]
-}
-
-@test "template and archive round trip" {
-  "$CLI" new alpha
-  printf data >"$MULTIGRAVITY_HOME/alpha/example file"
-  "$CLI" template save alpha base
-  "$CLI" new beta --from base
-  [ "$(<"$MULTIGRAVITY_HOME/beta/example file")" = data ]
-  "$CLI" export alpha "$TEST_ROOT/profile.tar.gz"
-  "$CLI" import "$TEST_ROOT/profile.tar.gz" restored
-  [ "$(<"$MULTIGRAVITY_HOME/restored/example file")" = data ]
+  [[ "$output" == *"HOME=$MULTIGRAVITY_HOME/alpha"* ]]
+  [[ "$output" == *"ARG=$TEST_ROOT/project folder"* ]]
 }
 
 @test "noninteractive deletion fails closed" {

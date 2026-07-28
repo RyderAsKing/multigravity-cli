@@ -5,7 +5,7 @@ setup() { setup_workspace; }
 teardown() { teardown_workspace; }
 
 @test "version works without creating profile storage" {
-  run "$CLI" version --short
+  run "$CLI" version
   [ "$status" -eq 0 ]
   [[ "$output" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-dev)?$ ]]
   [ ! -e "$MULTIGRAVITY_HOME" ]
@@ -25,7 +25,7 @@ teardown() { teardown_workspace; }
   [ ! -e "$TEST_ROOT/escape" ]
 }
 
-@test "forwarded arguments require an explicit separator" {
+@test "launch accepts only a profile name" {
   run "$CLI" new alpha
   [ "$status" -eq 0 ]
   run "$CLI" launch alpha unexpected
@@ -42,8 +42,8 @@ teardown() { teardown_workspace; }
   [[ "$output" == *"HOME=$MULTIGRAVITY_HOME/alpha"* ]]
 }
 
-@test "completion includes explicit launch" {
-  run "$CLI" completion bash
-  [ "$status" -eq 0 ]
-  [[ "$output" == *'new launch list'* ]]
+@test "removed commands fail clearly" {
+  run "$CLI" update
+  [ "$status" -eq 2 ]
+  [[ "$output" == *'unknown command: update'* ]]
 }

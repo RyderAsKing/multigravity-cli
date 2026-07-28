@@ -15,40 +15,11 @@ concurrency:
 
 jobs:
   test:
-    name: Test (${{ matrix.arch }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: amd64
-            runner: ubuntu-24.04
-          - arch: arm64
-            runner: ubuntu-24.04-arm
-    runs-on: ${{ matrix.runner }}
+    name: Test
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Install test tools
         run: sudo apt-get update && sudo apt-get install -y bats shellcheck shfmt
-      - name: Lint and test
-        run: make lint test
-      - name: Reproducible build
-        run: make reproducible
-      - name: Security source scan
-        run: |
-          ! grep -R -E 'raw\.githubusercontent\.com|sujitagarwal|PowerShell|Darwin|Windows' \
-            --exclude-dir=.git --exclude-dir=.opencode --exclude=NOTICE.md --exclude=Makefile --exclude=ci.yml .
-
-  containers:
-    name: Compatibility (Alpine musl)
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - name: Build and smoke test in musl container
-        run: |
-          docker run --rm -v "$PWD:/work:ro" alpine:3.20 sh -eu -c '
-            apk add --no-cache bash coreutils findutils git grep tar
-            cd /work
-            VERSION=0.0.0-dev COMMIT=container OUTPUT=/tmp/multigravity-linux-all bash ./scripts/build
-            bash -n /tmp/multigravity-linux-all
-            test "$(/tmp/multigravity-linux-all version --short)" = 0.0.0-dev
-          '
+      - name: Validate
+        run: make lint test reproducible

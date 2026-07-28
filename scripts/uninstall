@@ -35,5 +35,5 @@ if [[ -L "$target" ]]; then
   printf 'refusing to remove symlink: %s\n' "$target" >&2
   exit 4
 fi
-rm -f -- "$target" "$target.bak"
+rm -f -- "$target"
 printf 'Removed %s. Profile data was preserved.\n' "$target"

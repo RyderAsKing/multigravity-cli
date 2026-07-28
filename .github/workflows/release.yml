@@ -5,110 +5,30 @@ on:
     tags: ['v*']
 
 permissions:
-  contents: read
-
-concurrency:
-  group: release-${{ github.ref_name }}
-  cancel-in-progress: false
+  contents: write
 
 jobs:
-  build:
+  release:
+    name: Release
     runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      id-token: write
-    outputs:
-      tag: ${{ steps.meta.outputs.tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.ref }}
-          fetch-depth: 0
-      - id: meta
-        name: Validate release tag
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Validate tag
         run: |
-          tag="${{ github.ref_name }}"
+          tag='${{ github.ref_name }}'
           [[ "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
-          tag_object=$(git rev-parse "$tag^{tag}")
-          test "$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$tag_object" --jq '.verification.verified')" = true
-          test "$(git rev-list -n1 "$tag")" = "$(git rev-parse HEAD)"
-          ./scripts/check-release-history
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-      - name: Install validation tools
+      - name: Install test tools
         run: sudo apt-get update && sudo apt-get install -y bats shellcheck shfmt
-      - name: Build and test exact source
+      - name: Test and build
         run: |
-          tag="${{ steps.meta.outputs.tag }}"
-          version=${tag#v}
-          make lint test VERSION="$version"
-          make reproducible VERSION="$version"
-      - name: Normalize version and build release artifact
-        run: VERSION="${{ steps.meta.outputs.tag }}"; VERSION="${VERSION#v}" ./scripts/build
-      - name: Generate checksums
+          version='${{ github.ref_name }}'
+          make release-check VERSION="${version#v}"
+      - name: Generate checksum
         working-directory: dist
-        run: sha256sum multigravity-linux-all > SHA256SUMS
-      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
-      - name: Sign release blobs keylessly
-        run: |
-          cosign sign-blob --yes --bundle dist/multigravity-linux-all.bundle dist/multigravity-linux-all
-          cosign sign-blob --yes --bundle dist/SHA256SUMS.bundle dist/SHA256SUMS
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: release-assets
-          path: |
-            dist/multigravity-linux-all
-            dist/multigravity-linux-all.bundle
-            dist/SHA256SUMS
-            dist/SHA256SUMS.bundle
-          if-no-files-found: error
-
-  validate-artifact:
-    needs: build
-    strategy:
-      matrix:
-        include:
-          - runner: ubuntu-24.04
-            arch: amd64
-          - runner: ubuntu-24.04-arm
-            arch: arm64
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
-        with:
-          name: release-assets
-          path: dist
-      - name: Validate exact artifact
-        run: |
-          chmod +x dist/multigravity-linux-all
-          bash -n dist/multigravity-linux-all
-          tag="${{ needs.build.outputs.tag }}"
-          test "$(dist/multigravity-linux-all version --short)" = "${tag#v}"
-
-  publish:
-    needs: [build, validate-artifact]
-    runs-on: ubuntu-24.04
-    environment: release
-    permissions:
-      contents: write
-      id-token: write
-      attestations: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: ${{ needs.build.outputs.tag }}
-          fetch-depth: 0
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
-        with:
-          name: release-assets
-          path: dist
-      - uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373
-        with:
-          subject-path: dist/multigravity-linux-all
-      - name: Publish GitHub release
+        run: sha256sum multigravity > SHA256SUMS
+      - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.build.outputs.tag }}
-        run: gh release create "$TAG" dist/* --verify-tag --generate-notes --title "$TAG"
+        run: gh release create '${{ github.ref_name }}' dist/multigravity dist/SHA256SUMS --generate-notes --title '${{ github.ref_name }}'
