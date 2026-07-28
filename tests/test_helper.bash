@@ -4,7 +4,7 @@ setup_workspace() {
   export MULTIGRAVITY_HOME="$TEST_ROOT/profiles"
   mkdir -p "$HOME"
   CLI="$BATS_TEST_DIRNAME/../../dist/multigravity-linux-all"
-  export MULTIGRAVITY_APP="$TEST_ROOT/antigravity"
+  export MULTIGRAVITY_APP="$TEST_ROOT/agy"
   cat >"$MULTIGRAVITY_APP" <<'APP'
 #!/usr/bin/env bash
 printf 'HOME=%s\n' "$HOME"

@@ -1,112 +1,157 @@
 # Multigravity
 
-Multigravity is a Linux-only Bash CLI for running Antigravity with separate
-home and XDG directories. Source is organized into modules and bundled into one
-architecture-independent executable Bash artifact for releases. It is not an
-ELF binary. The same artifact is tested on Linux amd64 and arm64.
+Run Antigravity with separate profiles on Linux.
 
-## Requirements
+Each profile gets its own settings, extensions, cache, and login state, so you
+can keep work, personal, and experimental environments apart.
 
-- Bash 4.4 or newer
-- GNU coreutils, GNU tar, `curl`, and standard Linux `/proc`
-- Antigravity
-- `cosign` for authenticated installation and self-update
-
-## Verified installation
-
-Never pipe a network response into a shell. Choose a stable release tag and
-download all verification material from that immutable release:
+## Quick start
 
 ```bash
-tag=v0.1.1
-base="https://github.com/RyderAsKing/multigravity-cli/releases/download/$tag"
-curl -fLO "$base/multigravity-linux-all"
-curl -fLO "$base/multigravity-linux-all.bundle"
-curl -fLO "$base/SHA256SUMS"
-curl -fLO "$base/SHA256SUMS.bundle"
+multigravity new work
+multigravity launch work
+```
 
-identity="https://github.com/RyderAsKing/multigravity-cli/.github/workflows/release.yml@refs/tags/$tag"
-issuer="https://token.actions.githubusercontent.com"
-cosign verify-blob --bundle SHA256SUMS.bundle --certificate-identity "$identity" --certificate-oidc-issuer "$issuer" SHA256SUMS
-cosign verify-blob --bundle multigravity-linux-all.bundle --certificate-identity "$identity" --certificate-oidc-issuer "$issuer" multigravity-linux-all
-sha256sum --check --ignore-missing SHA256SUMS
+Create another profile whenever you need one:
 
+```bash
+multigravity new personal
+multigravity list
+multigravity launch personal
+```
+
+## Install
+
+The easiest verified installation uses GitHub CLI 2.49 or newer:
+
+```bash
+tag=v0.1.2
+gh release download "$tag" \
+  --repo RyderAsKing/multigravity-cli \
+  --pattern multigravity-linux-all
+gh attestation verify multigravity-linux-all \
+  --repo RyderAsKing/multigravity-cli
 install -Dm755 multigravity-linux-all "$HOME/.local/bin/multigravity"
 ```
 
-The repository also provides `scripts/install` for use from an already trusted
-checkout. It installs a locally verified artifact, never edits shell startup
-files, defaults to `$HOME/.local/bin`, and prints PATH guidance when needed.
+Make sure `$HOME/.local/bin` is on your `PATH`, then check the installation:
 
-## Usage
-
-```text
-multigravity new work
-multigravity launch work -- /path/to/project
-multigravity list
-multigravity status
-multigravity clone work experiment
-multigravity rename experiment sandbox
-multigravity delete sandbox --yes
-multigravity template save work base
-multigravity export work work.multigravity.tar.gz
-multigravity import work.multigravity.tar.gz restored
-multigravity update --check
+```bash
+multigravity version
+multigravity doctor
 ```
 
-Run `multigravity help` for the complete interface. Launch is always explicit;
-unknown commands are errors. Arguments are forwarded to Antigravity only after
-`--` and are never evaluated as shell syntax.
+Multigravity requires Linux, Bash 4.4+, GNU coreutils, GNU tar, `curl`, and an
+installed Antigravity IDE. If Antigravity is not detected automatically, set
+`MULTIGRAVITY_APP` to the absolute path of its executable. Multigravity looks
+for the Antigravity command `agy` on your `PATH`. Authenticated self-updates also
+require [`cosign`](https://docs.sigstore.dev/cosign/system_config/installation/).
 
-## Storage and isolation
+## Common commands
 
-Profiles default to `$HOME/AntigravityProfiles`; set `MULTIGRAVITY_HOME` to a
-safe absolute directory to change it. Each isolated profile receives its own
-`HOME`, config, cache, data, state, user-data, and extension paths.
+| Command | What it does |
+| --- | --- |
+| `multigravity new NAME` | Create a profile |
+| `multigravity launch NAME` | Open a profile |
+| `multigravity list` | List profiles |
+| `multigravity status` | Show profile status |
+| `multigravity clone OLD NEW` | Copy a profile |
+| `multigravity rename OLD NEW` | Rename a profile |
+| `multigravity delete NAME` | Delete a profile after confirmation |
+| `multigravity doctor` | Check your setup |
+| `multigravity update --check` | Check for a new version |
+| `multigravity update` | Install the latest verified release |
 
-`new NAME --shared` intentionally links Antigravity user data and extensions to
-the user's ordinary Antigravity directories. Shared profiles therefore provide
-substantially less isolation: extension or settings changes affect every shared
-profile. Imported shared archives contain no link targets; trusted local targets
-are recreated during import.
+Run `multigravity help` to see every command.
 
-Profile isolation does not sandbox Antigravity, extensions, projects, the
-kernel, environment variables, or other resources available to the user.
+### Open a project
 
-## Archives
+Arguments after `--` are passed directly to Antigravity:
 
-Exports use a versioned manifest and payload. Export refuses untrusted links,
-special files, and existing output unless `--force` is passed. Import copies an
-archive into private storage, validates its paths/types/count/size, extracts
-away from the profile root, rejects links and special files, and commits the
-profile atomically. Treat archive contents as data from an untrusted source;
-the files may still affect Antigravity after launch.
+```bash
+multigravity launch work -- /path/to/project
+```
 
-## Updates and rollback
+## Back up a profile
 
-`multigravity update` uses stable GitHub Releases from this repository only. It
-pins the selected tag, verifies both Sigstore identity and SHA-256, syntax-checks
-and smoke-tests the artifact, then atomically replaces the executable. The prior
-artifact remains next to it as `multigravity.bak`. Downgrades and prereleases are
-rejected. Use `--version vX.Y.Z` to choose a stable release explicitly.
+```bash
+multigravity export work work.multigravity.tar.gz
+multigravity import work.multigravity.tar.gz restored-work
+```
 
-## Migration and uninstall
+Imports are checked for unsafe paths, links, special files, and excessive
+size before a profile is created. Only import profiles from sources you trust,
+because their settings and extensions can still affect Antigravity.
 
-Existing Linux profile directories may be reused after manual validation. Old
-desktop launchers should be removed and regenerated by creating or renaming a
-profile; inherited launcher scripts are never executed automatically.
+## Shared profiles
 
-Run `scripts/uninstall [--prefix DIRECTORY]` from a trusted checkout. It removes
-only the installed executable and backup. Profiles are deliberately preserved.
+Normal profiles are isolated. If you intentionally want a profile to reuse your
+regular Antigravity settings and extensions, create it with:
+
+```bash
+multigravity new shared-work --shared
+```
+
+Changes made by a shared profile can affect your regular Antigravity setup and
+other shared profiles.
+
+## Where profiles are stored
+
+Profiles are stored in:
+
+```text
+$HOME/AntigravityProfiles
+```
+
+To use another location, set `MULTIGRAVITY_HOME` to a safe absolute directory.
+Multigravity isolates profile files; it is not a security sandbox for the IDE,
+extensions, or opened projects.
+
+## Uninstall
+
+Remove the executable:
+
+```bash
+rm -f "$HOME/.local/bin/multigravity" "$HOME/.local/bin/multigravity.bak"
+```
+
+Your profiles are kept. Delete `$HOME/AntigravityProfiles` separately only if
+you no longer need them.
+
+<details>
+<summary>Manual Sigstore verification</summary>
+
+Every release includes SHA-256 checksums and keyless Sigstore bundles. Download
+all four release assets, then run:
+
+```bash
+tag=v0.1.2
+identity="https://github.com/RyderAsKing/multigravity-cli/.github/workflows/release.yml@refs/tags/$tag"
+issuer="https://token.actions.githubusercontent.com"
+
+cosign verify-blob --bundle SHA256SUMS.bundle \
+  --certificate-identity "$identity" \
+  --certificate-oidc-issuer "$issuer" SHA256SUMS
+cosign verify-blob --bundle multigravity-linux-all.bundle \
+  --certificate-identity "$identity" \
+  --certificate-oidc-issuer "$issuer" multigravity-linux-all
+sha256sum --check --ignore-missing SHA256SUMS
+```
+
+`multigravity-linux-all` is one architecture-independent Bash executable tested
+on Linux amd64 and arm64. The `.bundle` files contain verification evidence and
+are not programs.
+
+</details>
 
 ## Development
 
 ```bash
 make lint
 make test
-make build VERSION=0.1.0
-make reproducible VERSION=0.1.0
+make reproducible
 ```
 
-Releases must come from a fresh, rights-reviewed history as described in
-[`NOTICE.md`](NOTICE.md). This clean-room engineering process is not legal advice.
+See [`SECURITY.md`](SECURITY.md) for vulnerability reporting and
+[`NOTICE.md`](NOTICE.md) for provenance information. New code is licensed under
+the [MIT License](LICENSE).

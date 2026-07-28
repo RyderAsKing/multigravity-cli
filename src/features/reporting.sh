@@ -25,7 +25,7 @@ mg_profile_running() {
     found_app=0
     found_data=0
     while IFS= read -r -d '' arg; do
-      [[ "${arg##*/}" == antigravity || "${arg##*/}" == Antigravity.AppImage ]] && found_app=1
+      [[ "${arg##*/}" == agy || "${arg##*/}" == Antigravity.AppImage ]] && found_app=1
       [[ "$arg" == "$expected" ]] && found_data=1
     done <"$pid/cmdline"
     ((found_app && found_data)) && return 0
