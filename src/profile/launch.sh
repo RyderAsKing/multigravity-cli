@@ -5,6 +5,7 @@ mg_cmd_launch() {
   path=$(mg_profile_path "$name")
   mg_require_real_directory "$path" "$MG_HOME"
   mg_require_app
+  mg_share_host_state "$path"
   project=$(pwd -P)
   exec env \
     HOME="$path" \
