@@ -32,6 +32,16 @@ teardown() { teardown_workspace; }
   [ "$status" -eq 2 ]
 }
 
+@test "launch discovers the agy command on PATH" {
+  run "$CLI" new alpha
+  [ "$status" -eq 0 ]
+
+  unset MULTIGRAVITY_APP
+  PATH="$TEST_ROOT:$PATH" run "$CLI" launch alpha
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"HOME=$MULTIGRAVITY_HOME/alpha"* ]]
+}
+
 @test "completion includes explicit launch" {
   run "$CLI" completion bash
   [ "$status" -eq 0 ]
