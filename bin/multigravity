@@ -2,8 +2,6 @@
 set -Eeuo pipefail
 
 MG_VERSION=0.0.0-dev
-MG_BUILD_COMMIT=development
-MG_EXECUTABLE=$(readlink -f -- "$0")
 MG_SOURCE_ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 
 source "$MG_SOURCE_ROOT/src/bootstrap.sh"
@@ -15,16 +13,9 @@ source "$MG_SOURCE_ROOT/src/core/locking.sh"
 source "$MG_SOURCE_ROOT/src/platform/linux.sh"
 source "$MG_SOURCE_ROOT/src/platform/antigravity.sh"
 source "$MG_SOURCE_ROOT/src/profile/layout.sh"
-source "$MG_SOURCE_ROOT/src/profile/shortcuts.sh"
 source "$MG_SOURCE_ROOT/src/profile/lifecycle.sh"
 source "$MG_SOURCE_ROOT/src/profile/launch.sh"
-source "$MG_SOURCE_ROOT/src/features/templates.sh"
-source "$MG_SOURCE_ROOT/src/features/archive.sh"
 source "$MG_SOURCE_ROOT/src/features/reporting.sh"
-source "$MG_SOURCE_ROOT/src/features/completion.sh"
-source "$MG_SOURCE_ROOT/src/features/doctor.sh"
-source "$MG_SOURCE_ROOT/src/features/update.sh"
-source "$MG_SOURCE_ROOT/src/cli/metadata.sh"
 source "$MG_SOURCE_ROOT/src/cli/usage.sh"
 source "$MG_SOURCE_ROOT/src/cli/parse.sh"
 source "$MG_SOURCE_ROOT/src/cli/dispatch.sh"
