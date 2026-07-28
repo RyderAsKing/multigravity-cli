@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+export LC_ALL=C
+
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
+VERSION=${VERSION:-0.0.0-dev}
+COMMIT=${COMMIT:-$(git -C "$ROOT" rev-parse --verify HEAD 2>/dev/null || printf unknown)}
+OUTPUT=${OUTPUT:-$ROOT/dist/multigravity-linux-all}
+
+[[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-dev)?$ ]] || {
+  printf 'invalid VERSION: %s\n' "$VERSION" >&2
+  exit 2
+}
+[[ "$COMMIT" =~ ^[A-Za-z0-9._-]+$ ]] || {
+  printf 'invalid COMMIT\n' >&2
+  exit 2
+}
+
+modules=(
+  src/bootstrap.sh
+  src/core/errors.sh src/core/config.sh src/core/paths.sh src/core/validation.sh src/core/locking.sh
+  src/platform/linux.sh src/platform/antigravity.sh
+  src/profile/layout.sh src/profile/shortcuts.sh src/profile/lifecycle.sh src/profile/launch.sh
+  src/features/templates.sh src/features/archive.sh src/features/reporting.sh src/features/completion.sh
+  src/features/doctor.sh src/features/update.sh
+  src/cli/metadata.sh src/cli/usage.sh src/cli/parse.sh src/cli/dispatch.sh
+)
+
+mkdir -p -- "$(dirname -- "$OUTPUT")"
+tmp="$OUTPUT.tmp"
+trap 'rm -f -- "$tmp"' EXIT
+{
+  printf '%s\n' '#!/usr/bin/env bash' '# Generated deterministically by scripts/build. Do not edit.' 'set -Eeuo pipefail'
+  printf 'MG_VERSION=%q\nMG_BUILD_COMMIT=%q\n' "$VERSION" "$COMMIT"
+  printf '%s\n' 'MG_EXECUTABLE=$(readlink -f -- "$0")'
+  for module in "${modules[@]}"; do
+    printf '\n# module: %s\n' "$module"
+    sed '1{/^#!\/usr\/bin\/env bash$/d;}; s/@MG_VERSION@/'"$VERSION"'/g; s/@MG_COMMIT@/'"$COMMIT"'/g' "$ROOT/$module"
+  done
+  printf '\n%s\n' 'mg_linux_require_base_tools' 'mg_main "$@"'
+} >"$tmp"
+
+duplicates=$(grep -hE '^mg_[a-zA-Z0-9_]+\(\)' "${modules[@]/#/$ROOT/}" | cut -d'(' -f1 | sort | uniq -d)
+[[ -z "$duplicates" ]] || {
+  printf 'duplicate functions:\n%s\n' "$duplicates" >&2
+  exit 1
+}
+! grep -q '@MG_\(VERSION\|COMMIT\)@' "$tmp" || {
+  printf 'unresolved build placeholder\n' >&2
+  exit 1
+}
+bash -n "$tmp"
+chmod 755 "$tmp"
+mv -f -- "$tmp" "$OUTPUT"
+trap - EXIT
+printf '%s\n' "$OUTPUT"

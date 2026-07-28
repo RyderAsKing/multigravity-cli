@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+prefix=${HOME:?}/.local
+if (($#)); then
+  [[ $# == 2 && $1 == '--prefix' ]] || {
+    printf 'Usage: scripts/uninstall [--prefix DIRECTORY]\n' >&2
+    exit 2
+  }
+  prefix=$2
+fi
+[[ "$prefix" == /* && "$prefix" != / ]] || {
+  printf 'unsafe prefix\n' >&2
+  exit 4
+}
+if [[ ! -e "$prefix" ]]; then
+  printf 'Nothing installed under %s. Profile data was preserved.\n' "$prefix"
+  exit 0
+fi
+[[ -d "$prefix" && ! -L "$prefix" ]] || {
+  printf 'prefix must be a real directory\n' >&2
+  exit 4
+}
+prefix=$(readlink -f -- "$prefix")
+if [[ ! -e "$prefix/bin" ]]; then
+  printf 'Nothing installed under %s. Profile data was preserved.\n' "$prefix"
+  exit 0
+fi
+[[ -d "$prefix/bin" && ! -L "$prefix/bin" ]] || {
+  printf 'bin must be a real directory\n' >&2
+  exit 4
+}
+target="$prefix/bin/multigravity"
+if [[ -L "$target" ]]; then
+  printf 'refusing to remove symlink: %s\n' "$target" >&2
+  exit 4
+fi
+rm -f -- "$target" "$target.bak"
+printf 'Removed %s. Profile data was preserved.\n' "$target"

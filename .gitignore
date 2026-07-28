@@ -1,0 +1,5 @@
+dist/
+.bats/
+.opencode/
+*.tmp
+*.bak

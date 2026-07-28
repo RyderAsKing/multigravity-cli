@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+usage() {
+  printf 'Usage: scripts/install ARTIFACT [--prefix DIRECTORY]\n' >&2
+  exit 2
+}
+artifact=${1:-}
+[[ -n "$artifact" ]] || usage
+shift
+prefix=${HOME:?}/.local
+while (($#)); do
+  case $1 in
+    --prefix)
+      (($# >= 2)) || usage
+      prefix=$2
+      shift 2
+      ;;
+    *) usage ;;
+  esac
+done
+[[ "$artifact" == /* ]] || artifact="$PWD/$artifact"
+[[ -f "$artifact" && ! -L "$artifact" ]] || {
+  printf 'artifact must be a regular, non-symlink file\n' >&2
+  exit 4
+}
+[[ "$prefix" == /* && "$prefix" != / ]] || {
+  printf 'prefix must be a safe absolute path\n' >&2
+  exit 4
+}
+bash -n "$artifact"
+version=$("$artifact" version --short)
+[[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+  printf 'artifact is not a release build\n' >&2
+  exit 4
+}
+destination="$prefix/bin/multigravity"
+parent=$(dirname -- "$prefix")
+mkdir -p -- "$parent"
+parent=$(readlink -f -- "$parent")
+prefix="$parent/$(basename -- "$prefix")"
+[[ ! -L "$prefix" ]] || {
+  printf 'refusing symlink prefix: %s\n' "$prefix" >&2
+  exit 4
+}
+mkdir -p -- "$prefix"
+prefix=$(readlink -f -- "$prefix")
+destination="$prefix/bin/multigravity"
+[[ ! -L "$prefix/bin" ]] || {
+  printf 'refusing symlink bin directory: %s\n' "$prefix/bin" >&2
+  exit 4
+}
+mkdir -p -- "$prefix/bin"
+[[ ! -L "$destination" ]] || {
+  printf 'refusing to replace symlink: %s\n' "$destination" >&2
+  exit 4
+}
+tmp=$(mktemp -p "$(dirname -- "$destination")" .multigravity.XXXXXXXX)
+trap 'rm -f -- "$tmp"' EXIT
+install -m 755 -- "$artifact" "$tmp"
+mv -fT -- "$tmp" "$destination"
+trap - EXIT
+printf 'Installed multigravity %s at %s\n' "$version" "$destination"
+case :$PATH: in *:"$prefix/bin":*) ;; *) printf 'Add %s/bin to PATH.\n' "$prefix" ;; esac
