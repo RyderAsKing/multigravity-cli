@@ -24,6 +24,7 @@ teardown() { teardown_workspace; }
   run "$CLI" launch alpha
   [ "$status" -eq 0 ]
   [[ "$output" == *"HOME=$MULTIGRAVITY_HOME/alpha"* ]]
+  [[ "$output" == *"ARG=--add-dir"* ]]
   [[ "$output" == *"ARG=$TEST_ROOT/project folder"* ]]
 }
 
