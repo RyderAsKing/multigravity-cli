@@ -14,5 +14,5 @@ mg_cmd_launch() {
     XDG_DATA_HOME="$path/.local/share" \
     XDG_STATE_HOME="$path/.local/state" \
     "$MG_APP" \
-    "$project"
+    --add-dir "$project"
 }
