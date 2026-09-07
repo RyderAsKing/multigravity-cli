@@ -8,11 +8,13 @@ mg_cmd_launch() {
   mg_share_host_state "$path"
   project=$(pwd -P)
   exec env \
+    -u DBUS_SESSION_BUS_ADDRESS \
     HOME="$path" \
     XDG_CONFIG_HOME="$path/.config" \
     XDG_CACHE_HOME="$path/.cache" \
     XDG_DATA_HOME="$path/.local/share" \
     XDG_STATE_HOME="$path/.local/state" \
+    XDG_RUNTIME_DIR="$path/run" \
     "$MG_APP" \
     --add-dir "$project"
 }

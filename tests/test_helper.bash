@@ -9,6 +9,8 @@ setup_workspace() {
 #!/usr/bin/env bash
 printf 'HOME=%s\n' "$HOME"
 printf 'PWD=%s\n' "$PWD"
+printf 'DBUS=%s\n' "${DBUS_SESSION_BUS_ADDRESS-<unset>}"
+printf 'RUNTIME=%s\n' "${XDG_RUNTIME_DIR-<unset>}"
 printf 'ARG=%s\n' "$@"
 APP
   chmod +x "$MULTIGRAVITY_APP"

@@ -58,8 +58,14 @@ a different absolute directory if needed.
 Multigravity links non-Antigravity files from your home and XDG directories
 into each profile. Existing profile files are never overwritten. This makes
 normal developer workflows seamless, but it also means every profile can
-access the same host credentials and developer-tool state. Antigravity and
-Gemini account state remains local to each profile.
+access the same host developer-tool state. Antigravity and Gemini account
+state remains local to each profile, including `.antigravitycli`, keyrings
+(`~/.local/share/keyrings`, `~/.local/share/kwalletd`), and file token
+storage. Launch also isolates the D-Bus session bus (`DBUS_SESSION_BUS_ADDRESS`
+is unset and `XDG_RUNTIME_DIR` points at the profile) so `agy` falls back to
+per-profile file tokens instead of the shared Secret Service keyring. That
+matches headless, container, SSH, and WSL behavior where no session bus is
+present.
 
 ## Uninstall
 
