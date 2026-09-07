@@ -6,6 +6,19 @@ All notable changes to Multigravity are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-07
+
+### Fixed
+
+- Isolate `agy` account state on Linux desktops with a session bus. New and
+existing profiles keep their own `.antigravitycli`, `~/.local/share/keyrings`,
+and `~/.local/share/kwalletd` directories instead of symlinking the host
+ones, and `launch` unsets `DBUS_SESSION_BUS_ADDRESS` with an isolated
+`XDG_RUNTIME_DIR` so `agy` uses per-profile file token storage rather than
+the shared Secret Service keyring. Previously a new profile started logged
+in as the host, and logout or login in one profile changed all of them.
+Existing profiles with legacy symlinks are repaired on next launch.
+
 ## [0.3.0] - 2026-09-05
 
 ### Fixed
@@ -59,7 +72,8 @@ All notable changes to Multigravity are documented here. The format follows
   Antigravity profiles with their own home and XDG directories, profile
   lifecycle commands, and a deterministically bundled single-file artifact.
 
-[Unreleased]: https://github.com/RyderAsKing/multigravity-cli/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/RyderAsKing/multigravity-cli/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/RyderAsKing/multigravity-cli/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/RyderAsKing/multigravity-cli/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/RyderAsKing/multigravity-cli/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/RyderAsKing/multigravity-cli/compare/v0.1.2...v0.2.0

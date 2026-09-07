@@ -21,34 +21,64 @@ teardown() { teardown_workspace; }
   "$CLI" new alpha
   mkdir -p "$TEST_ROOT/project folder"
   cd "$TEST_ROOT/project folder"
-  run "$CLI" launch alpha
+  run env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/1000/bus" XDG_RUNTIME_DIR="/run/user/1000" "$CLI" launch alpha
   [ "$status" -eq 0 ]
   [[ "$output" == *"HOME=$MULTIGRAVITY_HOME/alpha"* ]]
+  [[ "$output" == *"DBUS=<unset>"* ]]
+  [[ "$output" == *"RUNTIME=$MULTIGRAVITY_HOME/alpha/run"* ]]
   [[ "$output" == *"ARG=--add-dir"* ]]
   [[ "$output" == *"ARG=$TEST_ROOT/project folder"* ]]
 }
 
 @test "launch shares host tool state but isolates Antigravity state" {
   printf '[user]\n  name = Host User\n' >"$HOME/.gitconfig"
-  mkdir -p "$HOME/.ssh" "$HOME/.config/gh" "$HOME/.config/tooling" "$HOME/.local/share/keyrings" "$HOME/.gemini"
+  mkdir -p "$HOME/.ssh" "$HOME/.config/gh" "$HOME/.config/tooling" "$HOME/.local/share/keyrings" "$HOME/.local/share/kwalletd" "$HOME/.gemini" "$HOME/.antigravitycli"
   printf 'github.com:\n' >"$HOME/.config/gh/hosts.yml"
   printf 'host\n' >"$HOME/.config/tooling/settings"
   printf 'secret\n' >"$HOME/.gemini/token"
+  printf 'binding\n' >"$HOME/.antigravitycli/binding.json"
+  printf 'secret\n' >"$HOME/.local/share/keyrings/login.keyring"
 
   "$CLI" new alpha
   mkdir -p "$MULTIGRAVITY_HOME/alpha/.config/tooling" "$MULTIGRAVITY_HOME/alpha/.gemini"
   printf 'profile\n' >"$MULTIGRAVITY_HOME/alpha/.config/tooling/settings"
-  run "$CLI" launch alpha
+  run env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/1000/bus" XDG_RUNTIME_DIR="/run/user/1000" "$CLI" launch alpha
   [ "$status" -eq 0 ]
 
   [ "$(readlink "$MULTIGRAVITY_HOME/alpha/.gitconfig")" = "$HOME/.gitconfig" ]
   [ "$(readlink "$MULTIGRAVITY_HOME/alpha/.ssh")" = "$HOME/.ssh" ]
   [ "$(readlink "$MULTIGRAVITY_HOME/alpha/.config/gh")" = "$HOME/.config/gh" ]
-  [ "$(readlink "$MULTIGRAVITY_HOME/alpha/.local/share/keyrings")" = "$HOME/.local/share/keyrings" ]
+  [[ "$output" == *"DBUS=<unset>"* ]]
+  [[ "$output" == *"RUNTIME=$MULTIGRAVITY_HOME/alpha/run"* ]]
   [ ! -L "$MULTIGRAVITY_HOME/alpha/.config/Antigravity" ]
   [ ! -L "$MULTIGRAVITY_HOME/alpha/.antigravity" ]
   [ ! -L "$MULTIGRAVITY_HOME/alpha/.gemini" ]
+  [ ! -L "$MULTIGRAVITY_HOME/alpha/.antigravitycli" ]
+  [ -d "$MULTIGRAVITY_HOME/alpha/.antigravitycli" ]
+  [ ! -L "$MULTIGRAVITY_HOME/alpha/.local/share/keyrings" ]
+  [ -d "$MULTIGRAVITY_HOME/alpha/.local/share/keyrings" ]
+  [ ! -L "$MULTIGRAVITY_HOME/alpha/.local/share/kwalletd" ]
+  [ -d "$MULTIGRAVITY_HOME/alpha/.local/share/kwalletd" ]
+  [ -d "$MULTIGRAVITY_HOME/alpha/run" ]
   [ "$(<"$MULTIGRAVITY_HOME/alpha/.config/tooling/settings")" = profile ]
+}
+
+@test "launch repairs legacy shared auth symlinks" {
+  mkdir -p "$HOME/.antigravitycli" "$HOME/.local/share/keyrings" "$HOME/.local/share/kwalletd"
+  "$CLI" new alpha
+  rm -rf -- "$MULTIGRAVITY_HOME/alpha/.antigravitycli" "$MULTIGRAVITY_HOME/alpha/.local/share/keyrings" "$MULTIGRAVITY_HOME/alpha/.local/share/kwalletd" "$MULTIGRAVITY_HOME/alpha/run"
+  ln -s -- "$HOME/.antigravitycli" "$MULTIGRAVITY_HOME/alpha/.antigravitycli"
+  ln -s -- "$HOME/.local/share/keyrings" "$MULTIGRAVITY_HOME/alpha/.local/share/keyrings"
+  ln -s -- "$HOME/.local/share/kwalletd" "$MULTIGRAVITY_HOME/alpha/.local/share/kwalletd"
+  run "$CLI" launch alpha
+  [ "$status" -eq 0 ]
+  [ ! -L "$MULTIGRAVITY_HOME/alpha/.antigravitycli" ]
+  [ -d "$MULTIGRAVITY_HOME/alpha/.antigravitycli" ]
+  [ ! -L "$MULTIGRAVITY_HOME/alpha/.local/share/keyrings" ]
+  [ -d "$MULTIGRAVITY_HOME/alpha/.local/share/keyrings" ]
+  [ ! -L "$MULTIGRAVITY_HOME/alpha/.local/share/kwalletd" ]
+  [ -d "$MULTIGRAVITY_HOME/alpha/.local/share/kwalletd" ]
+  [ -d "$MULTIGRAVITY_HOME/alpha/run" ]
 }
 
 @test "launch does not link a profile root nested below the host home" {
