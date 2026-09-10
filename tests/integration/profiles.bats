@@ -81,6 +81,37 @@ teardown() { teardown_workspace; }
   [ -d "$MULTIGRAVITY_HOME/alpha/run" ]
 }
 
+@test "launch forwards host wayland sockets into profile runtime dir" {
+  local host_run="$TEST_ROOT/host-run"
+  mkdir -p "$host_run"
+  touch "$host_run/wayland-0" "$host_run/wayland-0.lock"
+
+  "$CLI" new alpha
+  run env XDG_RUNTIME_DIR="$host_run" "$CLI" launch alpha
+  [ "$status" -eq 0 ]
+  [ -L "$MULTIGRAVITY_HOME/alpha/run/wayland-0" ]
+  [ "$(readlink "$MULTIGRAVITY_HOME/alpha/run/wayland-0")" = "$host_run/wayland-0" ]
+  [ -L "$MULTIGRAVITY_HOME/alpha/run/wayland-0.lock" ]
+  [ "$(readlink "$MULTIGRAVITY_HOME/alpha/run/wayland-0.lock")" = "$host_run/wayland-0.lock" ]
+}
+
+@test "launch cleans up stale wayland socket symlinks in profile runtime dir" {
+  local host_run="$TEST_ROOT/host-run"
+  mkdir -p "$host_run"
+  touch "$host_run/wayland-1"
+
+  "$CLI" new alpha
+  ln -s "$host_run/stale-wayland-0" "$MULTIGRAVITY_HOME/alpha/run/wayland-0"
+  [ -L "$MULTIGRAVITY_HOME/alpha/run/wayland-0" ]
+
+  run env XDG_RUNTIME_DIR="$host_run" "$CLI" launch alpha
+  [ "$status" -eq 0 ]
+  [ ! -e "$MULTIGRAVITY_HOME/alpha/run/wayland-0" ]
+  [ ! -L "$MULTIGRAVITY_HOME/alpha/run/wayland-0" ]
+  [ -L "$MULTIGRAVITY_HOME/alpha/run/wayland-1" ]
+  [ "$(readlink "$MULTIGRAVITY_HOME/alpha/run/wayland-1")" = "$host_run/wayland-1" ]
+}
+
 @test "launch does not link a profile root nested below the host home" {
   local nested_profiles="$HOME/AntigravityProfiles"
   env MULTIGRAVITY_HOME="$nested_profiles" "$CLI" new alpha

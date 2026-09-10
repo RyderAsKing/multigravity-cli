@@ -65,7 +65,9 @@ storage. Launch also isolates the D-Bus session bus (`DBUS_SESSION_BUS_ADDRESS`
 is unset and `XDG_RUNTIME_DIR` points at the profile) so `agy` falls back to
 per-profile file tokens instead of the shared Secret Service keyring. That
 matches headless, container, SSH, and WSL behavior where no session bus is
-present.
+present. Host Wayland compositor sockets (`wayland-*`) from `XDG_RUNTIME_DIR`
+are forwarded into the profile's runtime directory so clipboard operations
+(such as pasting images via `wl-paste`) continue to work seamlessly.
 
 ## Uninstall
 
