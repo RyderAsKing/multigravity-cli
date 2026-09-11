@@ -21,12 +21,37 @@ mg_ensure_isolated_dir() {
   chmod 700 -- "$dir"
 }
 
+mg_link_runtime_display_sockets() {
+  local profile=$1 host_run socket restore_nullglob=0
+  host_run=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+  [[ -d "$host_run" ]] || return 0
+
+  shopt -q nullglob || restore_nullglob=1
+  shopt -s nullglob
+  for socket in "$profile/run"/wayland-*; do
+    [[ -L "$socket" && ! -e "$socket" ]] && rm -f -- "$socket"
+  done
+
+  for socket in "$host_run"/wayland-*; do
+    [[ -e "$socket" || -L "$socket" ]] || continue
+    ln -sf -- "$socket" "$profile/run/${socket##*/}"
+  done
+
+  if [[ -n "${WAYLAND_DISPLAY:-}" && -e "$host_run/$WAYLAND_DISPLAY" ]]; then
+    ln -sf -- "$host_run/$WAYLAND_DISPLAY" "$profile/run/$WAYLAND_DISPLAY"
+  fi
+
+  ((restore_nullglob == 1)) && shopt -u nullglob
+  return 0
+}
+
 mg_isolate_auth_state() {
   local profile=$1
   mg_ensure_isolated_dir "$profile/.antigravitycli"
   mg_ensure_isolated_dir "$profile/.local/share/keyrings"
   mg_ensure_isolated_dir "$profile/.local/share/kwalletd"
   mg_ensure_isolated_dir "$profile/run"
+  mg_link_runtime_display_sockets "$profile"
 }
 
 mg_link_host_entries() {

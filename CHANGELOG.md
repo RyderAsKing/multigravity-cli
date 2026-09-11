@@ -6,6 +6,14 @@ All notable changes to Multigravity are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Forward host Wayland compositor sockets (`wayland-*`) into the profile's
+  `XDG_RUNTIME_DIR`. Isolating `XDG_RUNTIME_DIR` prevented clipboard utilities
+  like `wl-paste` from reaching the display server on Wayland desktop
+  sessions, causing image paste in `agy` to fail with `exit status 1`.
+  Stale or broken socket symlinks are also cleaned up automatically.
+
 ## [0.3.1] - 2026-09-07
 
 ### Fixed
